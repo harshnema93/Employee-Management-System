@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthProvider';
-import { setLocalStorage, getLocalStorage } from '../../utils/localStorage';
+import axios from 'axios';
 
 const CreateTask = () => {
     const [userData, setUserData] = useContext(AuthContext);
@@ -21,45 +21,51 @@ const CreateTask = () => {
         return true;
     };
 
-    const handleSubmit = () => {
-        if (!validateForm()) return;
-    
-        const employees = [...userData];
-    
-        
-        const employeeIndex = employees.findIndex(emp => emp.id === parseInt(employeeId));
-        if (employeeIndex === -1) {
-            setError("Employee not found!");
-            return;
-        }
-    
-        
-        const newTask = {
-            id: employees[employeeIndex].tasks.length + 1,
-            active: true,
-            newTask: true,
-            completed: false,
-            failed: false,
-            taskTitle,
-            taskDescription,
-            taskDate,
-            category: category || "General",
-        };
-    
-        
-        employees[employeeIndex].tasks.push(newTask);
-    
-        employees[employeeIndex].taskCounts.newTask += 1;
-    
-        setUserData(employees);
-    
-        setTaskTitle('');
-        setTaskDescription('');
-        setTaskDate('');
-        setCategory('');
-        setEmployeeId('');
+    const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    const employees = [...userData];
+    const employeeIndex = employees.findIndex(emp => emp.id === parseInt(employeeId));
+
+    if (employeeIndex === -1) {
+        setError("Employee not found!");
+        return;
+    }
+
+    const newTask = {
+        id: employees[employeeIndex].tasks.length + 1,
+        active: true,
+        newTask: true,
+        completed: false,
+        failed: false,
+        taskTitle,
+        taskDescription,
+        taskDate,
+        category: category || "General",
     };
-    
+
+    employees[employeeIndex].tasks.push(newTask);
+    employees[employeeIndex].taskCounts.newTask += 1;
+
+
+    try{
+        const response = await axios.put(`/api/employees/${employeeId}`,employees[employeeIndex]);
+        if(response.status == 200){
+            const updatedEmployees = userData.map(emp =>
+                emp.id === employees[employeeIndex].id ? employees[employeeIndex] : emp
+            );
+            setUserData(updatedEmployees);
+            setTaskTitle('');
+            setTaskDescription('');
+            setTaskDate('');
+            setCategory('');
+            setEmployeeId('');
+            }
+        }catch(err){
+            console.log(err);
+        }
+    };
+
 
     return (
         <div className="bg-gray-100 p-6 rounded-lg shadow-lg max-w-lg mx-auto mt-10">

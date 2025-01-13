@@ -2,25 +2,17 @@ import React, { useEffect, useState, useContext } from 'react';
 import Header from '../other/Header';
 import TaskListNum from '../other/TaskListNum';
 import TaskList from '../TaskList/TaskList';
-import { getLocalStorage, setLocalStorage } from '../../utils/localStorage';
-import { AuthContext } from '../../context/AuthProvider'; 
+import { AuthContext } from '../../context/AuthProvider';
+import axios from 'axios';
 
 const EmployeeDashboard = (props) => {
   const [employeeData, setEmployeeData] = useState(null);
-  const [userData, setUserData] = useContext(AuthContext); 
+  const [userData, setUserData] = useContext(AuthContext);
 
-  
   useEffect(() => {
-    const { employees } = getLocalStorage();
-    const employee = employees?.find(e => e.id === props.data.id);
-    if (employee) {
-      setEmployeeData(employee);
-    } else {
-      console.error('Employee not found in localStorage');
-    }
-  }, [props.data]);
+     setEmployeeData(props.data);
+    }, [props.data]);
 
-  
   const updateTaskCounts = (updatedEmployee, countUpdates) => {
     Object.keys(countUpdates).forEach(key => {
       updatedEmployee.taskCounts[key] += countUpdates[key];
@@ -28,32 +20,30 @@ const EmployeeDashboard = (props) => {
     return updatedEmployee;
   };
 
-  
-  const updateTask = (taskId, updateFields, countUpdates) => {
-    const updatedEmployee = { ...employeeData };
 
-    
-    updatedEmployee.tasks = updatedEmployee.tasks.map(task =>
-      task.id === taskId ? { ...task, ...updateFields } : task
-    );
+  const updateTask = async (taskId, updateFields, countUpdates) => {
+      const updatedEmployee = { ...employeeData };
+      updatedEmployee.tasks = updatedEmployee.tasks.map(task =>
+        task.id === taskId ? { ...task, ...updateFields } : task
+      );
+       updateTaskCounts(updatedEmployee, countUpdates);
+        setEmployeeData(updatedEmployee);
 
-    
-    updateTaskCounts(updatedEmployee, countUpdates);
-
-    
-    setEmployeeData(updatedEmployee);
-
-    
-    const updatedEmployees = userData.map(emp =>
-      emp.id === updatedEmployee.id ? updatedEmployee : emp
-    );
-    setUserData(updatedEmployees);
-
-    
-    setLocalStorage({ employees: updatedEmployees });
+        try{
+            const response = await axios.put(`/api/employees/${updatedEmployee.id}`,updatedEmployee);
+            console.log(response);
+            if(response.status == 200){
+                const updatedEmployees = userData.map(emp =>
+                  emp.id === updatedEmployee.id ? response.data : emp
+                );
+                setUserData(updatedEmployees);
+            }
+        }catch(err){
+            console.log(err)
+        }
   };
 
-  
+
   const handleAcceptTask = (taskId) => {
     updateTask(
       taskId,
